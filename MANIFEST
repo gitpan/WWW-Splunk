@@ -1,0 +1,9 @@
+bin/sc
+Build.PL
+lib/WWW/Splunk/API.pm
+lib/WWW/Splunk.pm
+lib/WWW/Splunk/XMLParser.pm
+MANIFEST
+t/XMLParser.t
+ChangeLog
+META.yml
