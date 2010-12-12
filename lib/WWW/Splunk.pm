@@ -16,7 +16,9 @@ WWW::Splunk - Client library for Splunk log search engine
 
   my $sid = $splunk->start_search ('selinux avc');
   $splunk->poll_search ($sid);
-  print scalar $splunk->search_results ($sid);
+  until ($splunk->results_read ($sid)) {
+    print scalar $splunk->search_results ($sid);
+  }
   print " results found\n";
 
 Please consider this an alpha quality code, whose API can change
@@ -53,7 +55,7 @@ sub start_search
 	my $self = shift;
 	my $string = shift;
 
-	$self->{events_consumed} = 0;
+	$self->{results_consumed} = 0;
 	my $response = $self->post ('/search/jobs', {
 		search => "search $string",
 	});
@@ -104,11 +106,28 @@ sub search_results
 	my $self = shift;
 	my $sid = shift;
 
-	my @events = $self->get ('/search/jobs/'.$sid.'/events?offset='.
-		$self->{events_consumed});
-	$self->{events_consumed} += scalar @events;
+	my $done = $self->search_done ($sid);
+	my @results = $self->get ('/search/jobs/'.$sid.'/results?count=1024&offset='.
+		$self->{results_consumed});
+	$self->{results_consumed} += scalar @results;
+	$self->{last_read} = scalar @results if $done;
 
-	return @events;
+	return @results;
+}
+
+=head2 B<results_read> (F<sid>)
+
+Return true if search is finished and all there are no
+more results to read (everything was fetched with L<search_results>).
+
+=cut
+sub results_read
+{
+	my $self = shift;
+	my $sid = shift;
+
+	return undef if not defined $self->{last_read};
+	return $self->{last_read} eq 0;
 }
 
 =head1 AUTHORS

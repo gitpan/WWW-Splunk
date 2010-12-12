@@ -32,7 +32,7 @@ use Carp;
 use strict;
 use warnings;
 
-our $VERSION = '1.03';
+our $VERSION = '1.10';
 our $prefix = '/services';
 
 =head2 B<new> (F<params>)
@@ -181,6 +181,9 @@ sub put
 
 Request a Splunk api and deal with the results.
 
+Method can be either a L<HTTP::Request> instance (see L<HTTP::Request::Common>
+for useful ones), or a plain string, such as "GET" or "DELETE."
+
 =cut
 sub request {
 	my $self = shift;
@@ -195,7 +198,7 @@ sub request {
 		# Most likely a HTTP::Request::Common
 		$request = $method->($url, @_);
 	} else {
-		# Most likely a HTTP::Request::Common
+		# A method string
 		$request = new HTTP::Request ($method, $url);
 	}
 
@@ -208,7 +211,7 @@ sub request {
 	} else {
 		$request->uri ($request->uri.($request->uri =~ /\?/ ? '&' : '?').
 			'output_mode='.$output_mode);
-	};
+	}
 
 	# Run it
 	my $response = $self->{agent}->request ($request);
