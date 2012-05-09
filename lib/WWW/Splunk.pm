@@ -22,14 +22,14 @@ WWW::Splunk - Client library for Splunk log search engine
   print " results found\n";
 
 Please consider this an alpha quality code, whose API can change
-at any time, until we reach version 2.0. There are known glitches
+at any time, until we reach version 3.0. There are known glitches
 in the code quality now.
 Remember the code is the best documentation for now.
 
 =head1 DESCRIPTION
 
-This module contains utility functions for Splunk 4.1
-and 4.1.1 search API.
+This module contains utility functions for Splunk API, implementing
+version 4.1 API, verified to work with 4.2 and 4.3 versions.
 
 =cut
 
@@ -38,7 +38,7 @@ package WWW::Splunk;
 use strict;
 use warnings;
 
-our $VERSION = '1.03';
+our $VERSION = '2.0';
 
 use WWW::Splunk::API;
 use Carp;
@@ -59,7 +59,7 @@ sub start_search
 	my $until = shift;
 
 	# Format dates
-	($since, $until) = map { scalar UnixDate (ParseDate ($_) || $_, '%O') || $_ }
+	($since, $until) = map { defined $_ ? scalar UnixDate (ParseDate ($_) || $_, '%O') || $_ : undef }
 		($since, $until);
 
 	$self->{results_consumed} = 0;
@@ -68,9 +68,41 @@ sub start_search
 		(defined $since ? (earliest_time => $since) : ()),
 		(defined $until ? (latest_time => $until) : ()),
 	});
+	die 'Unexpected response format '
+		unless $response and ref $response eq 'XML::LibXML::Document';
 	my $sid = $response->findvalue ('/response/sid');
 	croak "Bad response" unless defined $sid;
 	return $sid;
+}
+
+=head2 B<rt_search> (F<string>) (F<callback>) [(F<since>)] [(F<until>]
+
+Initiate a real-time search, calling a callback for each line matched.
+
+Finishes only if connection terminates (potentially never), returning number of
+results consumed.
+
+=cut
+sub rt_search
+{
+	my $self = shift;
+	my $string = shift;
+	my $callback = shift;
+	my $since = shift || 'rt';
+	my $until = shift || 'rt';
+	my $counter = 0;
+
+	$self->post ('/search/jobs/export', {
+		search => "search $string",
+		earliest_time => $since,
+		latest_time => $until,
+		search_mode => 'realtime',
+	}, sub {
+		$callback->(@_);
+		$counter++;
+	});
+
+	return $counter;
 }
 
 =head2 B<search_done> (F<sid>)
@@ -84,7 +116,7 @@ sub search_done
 	my $sid = shift;
 
 	my $search = $self->get ('/search/jobs/'.$sid);
-	return $search->{done};
+	return $search->{isDone};
 }
 
 =head2 B<poll_search> (F<sid>)

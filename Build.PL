@@ -7,7 +7,7 @@ my $build = Module::Build->new(
 	module_name	=> 'WWW::Splunk',
 	license		=> 'perl',
 	dist_author	=> 'Lubomir Rintel <lkundrak@v3.sk>',
-	dist_version	=> '1.11',
+	dist_version	=> '2.0',
 	requires	=> {
 		'Carp'		=> 0,
 		'Getopt::Long'	=> 0,
@@ -16,7 +16,6 @@ my $build = Module::Build->new(
 		'Pod::Usage'	=> 0,
 		'Test::More'	=> 0,
 		'Text::CSV'	=> 0,
-		'XML::Feed'	=> 0,
 		'XML::LibXML'	=> 0,
 		'Date::Manip'	=> 0,
 	},
