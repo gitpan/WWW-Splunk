@@ -110,8 +110,8 @@ is_deeply (WWW::Splunk::XMLParser::parse ($case2), {
 		app => 'search',
 		can_write => 'true',
 		perms => {
-			read => [ nobody ],
-			write => [ nobody ]
+			read => [ 'nobody' ],
+			write => [ 'nobody' ]
 		}
 	},
 	cursorTime => '2038-01-19T04:14:07.000+01:00',
@@ -159,10 +159,13 @@ my $case5 = XML::LibXML->load_xml (string => <<EOF);
                 <field k="count">
                         <value><text>8086</text></value>
                 </field>
+		<field k="_raw">
+			<v xml:space="preserve" trunc="0">fnfnfn</v>
+		</field>
         </result>
 </results>
 EOF
 is_deeply ([ WWW::Splunk::XMLParser::parse ($case5) ], [
 	{ count => '666', http_status_code => '200' },
-	{ count => '8086', http_status_code => '204' }
+	{ count => '8086', http_status_code => '204', _raw => 'fnfnfn' }
 	], 'Results structure parsed fine');
