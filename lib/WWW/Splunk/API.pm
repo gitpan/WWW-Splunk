@@ -13,11 +13,6 @@ for API definition.
 
 This module is designed to be Splunk API version agnostic.
 
-Please consider this an alpha quality code, whose API can change
-at any time, until we reach version 2.0. There are known glitches
-in the code quality now.
-Remember the code is the best documentation for now.
-
 =cut
 
 package WWW::Splunk::API;
@@ -52,11 +47,14 @@ sub new
 	my $class = shift;
 	my $self = shift;
 
+	$self->{port} ||= 8089;
+	$self->{host} ||= 'localhost';
 	$self->{url} ||= 'https://'.$self->{host}.':'.$self->{port};
 
 	# Set up user agent unless an existing one was passed
 	unless ($self->{agent}) {
-		$self->{agent} = new LWP::UserAgent;
+		$self->{agent} = new LWP::UserAgent
+			(ssl_opts =>  {verify_hostname => (not $self->{unsafe_ssl})});
 		$self->{agent}->cookie_jar ({});
 		$self->{agent}->credentials (
 			delete ($self->{host}).':'.(delete $self->{port}),
@@ -167,7 +165,7 @@ sub request {
 		my($response, $ua, $h) = @_;
 
 		# Deal with HTTPS errors
-		# TODO: Get rid of --insecure magic, newrt Crypt::SSLeay does this right
+		# newer LWP::UserAgent does this right
 		if ($_ = $response->header ('Client-SSL-Warning')) {
 			# Why does LWP tolerate these by default?
 			croak "SSL Error: $_" unless $self->{unsafe_ssl};
@@ -223,12 +221,15 @@ sub request {
 		croak $error;
 	}
 
+	# We've gotten the response already
+	return if $callback;
+
 	# Parse content from synchronous responses
 	# TODO: use callback and m_media_type matchspecs
 	if ($content_type eq 'text/xml') {
 		my $xml = XML::LibXML->load_xml (string => $response->content);
 		my @ret = WWW::Splunk::XMLParser::parse ($xml);
-		return $#ret ? @ret : $ret[0] if @ret;
+		return $#ret ? @ret : $ret[0] if defined @ret;
 		return $xml;
 	} elsif ($response->code eq 204) {
 		# "No content"
